@@ -7,7 +7,7 @@ on:
 jobs:
   frontend-deploy:
     if: github.ref == 'refs/heads/frontend'
-    name: Deploy to K8S
+    name: Deploy to K8S frontend
     runs-on: ubuntu-latest
 
     steps:
@@ -30,21 +30,39 @@ jobs:
           chmod +x ./gradlew
           ./gradlew docker
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
+      - name: Login to docker hub
+        uses: actions-hub/docker/login@master
+        env:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: push
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          tags: aqulog/frontend:1.1
 
+      - name: Push Frontend Docker image
+        uses: actions-hub/docker@master
+        with:
+          args: push aqulog/frontend:1.1
+
+      - name: restart frontend container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 192.168.70.107
+          username: test
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            kubectl apply -f - <<EOF
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: frontend
+            spec:
+              containers:
+                - name: frontend
+                  image: aqulog/frontend:1.1
+            EOF
   backend-deploy:
     if: github.ref == 'refs/heads/backend'
-    name: Deploy to K8S
+    name: Deploy to K8S backend
     runs-on: ubuntu-latest
 
     steps:
@@ -67,14 +85,32 @@ jobs:
           chmod +x ./gradlew
           ./gradlew docker -Pplatform=backend
 
-      - name: Login to DockerHub
-        uses: docker/login-action@v1
-        with:
+      - name: Login to docker hub
+        uses: actions-hub/docker/login@master
+        env:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: push
-        uses: docker/build-push-action@v6
+      - name: Push Backend Docker image
+        uses: actions-hub/docker@master
         with:
-          push: true
-          tags: aqulog/backend:1.1
+          args: push aqulog/backend:1.1
+
+      - name: restart backend container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 192.168.70.107
+          username: test
+          key: ${{ secrets.SSH_KEY }}
+          port: 22
+          script: |
+            kubectl apply -f - <<EOF
+            apiVersion: v1
+            kind: Pod
+            metadata:
+              name: backend
+            spec:
+              containers:
+                - name: backend
+                  image: aqulog/backend:1.1
+            EOF
