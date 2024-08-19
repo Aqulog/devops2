@@ -3,7 +3,6 @@ name: devops test
 on:
   push:
     branches: [ frontend, backend ]
-
 jobs:
   frontend-deploy:
     if: github.ref == 'refs/heads/frontend'
